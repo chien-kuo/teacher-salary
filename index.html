@@ -191,6 +191,7 @@
             await refreshTADropdowns();
             await refreshReasonsList();
             await refreshProxiesList();
+            await loadHistoryRecords();
             // load existing salary JSON from Firestore for preview
             const display = document.getElementById('salaryJsonDisplay');
             if(display) {
@@ -757,23 +758,56 @@
             refreshTADropdowns();
         };
 
-        window.saveRecord = () => {
-            const row = document.getElementById('tb-body').insertRow(0);
-            const data = [
-                window.lastCalcResult.isF ? "✓" : "-",
-                document.getElementById('ta-teacher').options[document.getElementById('ta-teacher').selectedIndex].text,
-                `${document.getElementById('ta-sy').value}/${document.getElementById('ta-sm').value}/${document.getElementById('ta-sd').value}`,
-                window.lastCalcResult.isF ? "-" : document.getElementById('ta-hours').value + "hr",
-                document.getElementById('ta-reason').value || "-",
-                document.getElementById('ta-proxy').value || "-",
-                window.lastCalcResult.detail
-            ];
-            data.forEach((v, i) => {
-                const cell = row.insertCell();
-                cell.className = "p-4 border";
-                cell.innerText = v;
-            });
-            document.getElementById('btn-add').disabled = true;
+        async function loadHistoryRecords() {
+            const tbody = document.getElementById('tb-body');
+            tbody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-slate-500">載入中...</td></tr>';
+            try {
+                const q = query(collection(db, "records"), orderBy("createdAt", "desc"));
+                const snapshot = await getDocs(q);
+                tbody.innerHTML = "";
+                snapshot.forEach(doc => {
+                    const d = doc.data();
+                    const row = tbody.insertRow();
+                    const cells = [
+                        d.isFullDay ? "✓" : "-",
+                        d.teacherName,
+                        d.date,
+                        d.time,
+                        d.reason,
+                        d.proxy,
+                        d.detail
+                    ];
+                    cells.forEach(text => {
+                        const c = row.insertCell();
+                        c.className = "p-4 border";
+                        c.innerText = text;
+                    });
+                });
+            } catch(e) {
+                console.error(e);
+                tbody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-red-500">載入失敗</td></tr>';
+            }
+        }
+
+        window.saveRecord = async () => {
+            if(!window.lastCalcResult) return;
+            const record = {
+                isFullDay: window.lastCalcResult.isF,
+                teacherName: document.getElementById('ta-teacher').options[document.getElementById('ta-teacher').selectedIndex].text,
+                date: `${document.getElementById('ta-sy').value}/${document.getElementById('ta-sm').value}/${document.getElementById('ta-sd').value}`,
+                time: window.lastCalcResult.isF ? "-" : document.getElementById('ta-hours').value + "hr",
+                reason: document.getElementById('ta-reason').value || "-",
+                proxy: document.getElementById('ta-proxy').value || "-",
+                detail: window.lastCalcResult.detail,
+                createdAt: new Date().toISOString()
+            };
+            try {
+                await addDoc(collection(db, "records"), record);
+                await loadHistoryRecords();
+                document.getElementById('btn-add').disabled = true;
+            } catch(e) {
+                alert("儲存失敗: " + e.message);
+            }
         };
 
         window.exportToExcel = () => {

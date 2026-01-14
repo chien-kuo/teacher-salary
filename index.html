@@ -3,164 +3,182 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>幼兒園代課薪資管理系統</title>
+    <title>幼兒園代課薪資管理系統 - 專業管理版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <style>
+        #table-tb, #table-admin-history { min-width: 900px; }
+        .custom-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        [data-salary-toggle] { cursor: pointer; }
+    </style>
 </head>
-<body class="bg-slate-50 min-h-screen pb-10">
+<body class="bg-slate-50 min-h-screen pb-20 font-sans text-slate-900">
 
-    <nav class="bg-slate-800 text-white p-4 shadow-lg mb-8">
-        <div class="max-w-7xl mx-auto flex justify-between items-center">
-            <h1 class="text-xl font-bold tracking-tight">代課薪資核算系統</h1>
-            <button onclick="toggleAdmin()" class="bg-slate-600 hover:bg-slate-500 px-4 py-2 rounded text-sm transition">管理者後台</button>
+    <nav class="bg-slate-800 text-white p-4 shadow-lg mb-6 sticky top-0 z-40">
+        <div class="max-w-4xl mx-auto flex justify-between items-center">
+            <h1 class="text-lg font-bold tracking-tight">代課薪資核算系統</h1>
+            <button onclick="toggleAdmin()" class="bg-slate-600 hover:bg-slate-500 px-4 py-1.5 rounded-lg text-sm transition font-medium">管理者後台</button>
         </div>
     </nav>
 
-    <main class="max-w-7xl mx-auto px-4 space-y-8">
-        <section class="bg-white rounded-xl shadow-md overflow-hidden border border-slate-200">
-            <div class="bg-blue-600 text-white px-6 py-3 font-bold">薪資試算 (表格 TA)</div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-left text-sm border-collapse">
-                    <thead class="bg-slate-50 border-b">
+    <main class="max-w-4xl mx-auto px-4 space-y-6">
+        
+        <section class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="bg-blue-600 text-white px-5 py-4 font-bold flex justify-between items-center">
+                <span class="flex items-center gap-2">薪資試算 (TA)</span>
+                <label class="flex items-center text-sm font-normal cursor-pointer bg-blue-700 px-3 py-1 rounded-full">
+                    <input type="checkbox" id="ta-isFullDay" class="w-4 h-4 mr-2" onchange="syncUI()">
+                    全日代課模式
+                </label>
+            </div>
+            
+            <div class="p-6 space-y-5">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-bold text-slate-600 mb-1">請假教師</label>
+                        <select id="ta-teacher" class="w-full border-2 border-slate-100 rounded-xl p-3 bg-slate-50 focus:border-blue-500 outline-none transition"></select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-600 mb-1">代理人</label>
+                        <select id="ta-proxy" class="w-full border-2 border-slate-100 rounded-xl p-3 bg-slate-50 focus:border-blue-500 outline-none transition"></select>
+                    </div>
+                </div>
+
+                <div class="border-t border-slate-100 pt-5">
+                    <label class="block text-sm font-bold text-slate-600 mb-2">代課日期</label>
+                    <div class="space-y-3">
+                        <div class="flex items-center gap-3">
+                            <span id="label-s" class="hidden text-xs font-black text-slate-400 w-8">開始</span>
+                            <div class="flex-1 grid grid-cols-3 gap-2">
+                                <select id="ta-sy" onchange="syncDays('s')" class="border rounded-lg p-2 text-sm bg-white"></select>
+                                <select id="ta-sm" onchange="syncDays('s')" class="border rounded-lg p-2 text-sm bg-white"></select>
+                                <select id="ta-sd" class="border rounded-lg p-2 text-sm bg-white"></select>
+                            </div>
+                        </div>
+                        <div id="row-end" class="hidden flex items-center gap-3">
+                            <span class="text-xs font-black text-red-500 w-8">結束</span>
+                            <div class="flex-1 grid grid-cols-3 gap-2">
+                                <select id="ta-ey" onchange="syncDays('e')" class="border rounded-lg p-2 text-sm bg-white"></select>
+                                <select id="ta-em" onchange="syncDays('e')" class="border rounded-lg p-2 text-sm bg-white"></select>
+                                <select id="ta-ed" class="border rounded-lg p-2 text-sm bg-white"></select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 border-t border-slate-100 pt-5">
+                    <div>
+                        <label class="block text-sm font-bold text-slate-600 mb-1">代課時數</label>
+                        <select id="ta-hours" class="w-full border-2 border-slate-100 rounded-xl p-3 bg-slate-50">
+                            <script>for(let i=1;i<=7;i++) document.write(`<option value="${i}">${i} 小時</option>`)</script>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-600 mb-1">請假事由</label>
+                        <select id="ta-reason" class="w-full border-2 border-slate-100 rounded-xl p-3 bg-slate-50"></select>
+                    </div>
+                </div>
+
+                <div class="bg-blue-50 rounded-2xl p-4 border border-blue-100">
+                    <div class="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-2">薪資計算明細</div>
+                    <div id="ta-detail" class="text-sm text-blue-900 font-mono leading-relaxed whitespace-pre-line">請填寫資料後點擊下方計算按鈕</div>
+                </div>
+            </div>
+        </section>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <button onclick="handleCalculate()" class="bg-blue-600 text-white px-6 py-4 rounded-2xl font-bold shadow-lg hover:bg-blue-700 transition active:scale-95">1. 計算薪資</button>
+            <button id="btn-add" onclick="saveRecord()" disabled class="bg-emerald-600 text-white px-6 py-4 rounded-2xl font-bold shadow-lg disabled:opacity-30 transition active:scale-95">2. 儲存紀錄</button>
+            <button onclick="exportToExcel()" class="bg-slate-700 text-white px-6 py-4 rounded-2xl font-bold shadow-lg transition active:scale-95">匯出 Excel</button>
+        </div>
+
+        <section class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="bg-slate-700 text-white px-5 py-3 font-bold text-sm">歷史紀錄 (TB)</div>
+            <div class="overflow-x-auto custom-scroll">
+                <table id="table-tb" class="w-full text-left text-sm">
+                    <thead class="bg-slate-50 border-b border-slate-200">
                         <tr>
-                            <th class="p-4 border-r w-16">全日</th>
-                            <th class="p-4 border-r w-48">請假者姓名</th>
-                            <th class="p-4 border-r min-w-[280px]">日期範圍</th>
-                            <th class="p-4 border-r w-28">時間</th>
-                            <th class="p-4 border-r w-32">事由</th>
-                            <th class="p-4 border-r w-32">代理人</th>
-                            <th class="p-4 bg-blue-50">詳細計算過程</th>
+                            <th class="p-4 font-bold text-slate-500">全日</th>
+                            <th class="p-4 font-bold text-slate-500">教師姓名</th>
+                            <th class="p-4 font-bold text-slate-500">代課日期</th>
+                            <th class="p-4 font-bold text-slate-500">時間</th>
+                            <th class="p-4 font-bold text-slate-500">事由</th>
+                            <th class="p-4 font-bold text-slate-500">代理人</th>
+                            <th class="p-4 font-bold text-slate-500">詳細明細</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        <tr class="align-top">
-                            <td class="p-4 border-r text-center">
-                                <input type="checkbox" id="ta-isFullDay" class="w-5 h-5 mt-1 cursor-pointer" onchange="syncUI()">
-                            </td>
-                            <td class="p-4 border-r">
-                                <select id="ta-teacher" class="w-full border rounded p-2"></select>
-                            </td>
-                            <td class="p-4 border-r">
-                                <div class="space-y-2">
-                                    <div class="flex items-center space-x-1">
-                                        <span id="label-s" class="hidden text-xs font-bold w-6">起:</span>
-                                        <select id="ta-sy" onchange="syncDays('s')" class="border rounded p-1"></select>年
-                                        <select id="ta-sm" onchange="syncDays('s')" class="border rounded p-1"></select>月
-                                        <select id="ta-sd" class="border rounded p-1"></select>日
-                                    </div>
-                                    <div id="row-end" class="hidden flex items-center space-x-1">
-                                        <span class="text-xs font-bold w-6 text-red-500">迄:</span>
-                                        <select id="ta-ey" onchange="syncDays('e')" class="border rounded p-1"></select>年
-                                        <select id="ta-em" onchange="syncDays('e')" class="border rounded p-1"></select>月
-                                        <select id="ta-ed" class="border rounded p-1"></select>日
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="p-4 border-r text-center">
-                                <select id="ta-hours" class="w-full border rounded p-2">
-                                    <script>for(let i=1;i<=7;i++) document.write(`<option value="${i}">${i}hr</option>`)</script>
-                                </select>
-                            </td>
-                            <td class="p-4 border-r"><select id="ta-reason" class="w-full border rounded p-2"></select></td>
-                            <td class="p-4 border-r"><select id="ta-proxy" class="w-full border rounded p-2"></select></td>
-                            <td id="ta-detail" class="p-4 bg-blue-50 text-xs text-blue-800 font-mono italic">尚未計算</td>
-                        </tr>
-                    </tbody>
+                    <tbody id="tb-body" class="divide-y divide-slate-100"></tbody>
                 </table>
             </div>
         </section>
-
-        <div class="flex gap-4">
-            <button onclick="handleCalculate()" class="bg-blue-600 text-white px-8 py-3 rounded-full font-bold shadow-lg hover:bg-blue-700 transition">計算薪資</button>
-            <button id="btn-add" onclick="saveRecord()" disabled class="bg-green-600 text-white px-8 py-3 rounded-full font-bold shadow-lg disabled:bg-slate-300 transition">新增資料</button>
-            <button onclick="exportToExcel()" class="bg-emerald-700 text-white px-8 py-3 rounded-full font-bold shadow-lg transition">匯出 Excel</button>
-        </div>
-
-        <section class="bg-white rounded-xl shadow-md overflow-hidden border">
-            <div class="bg-slate-700 text-white px-6 py-3 font-bold">歷史紀錄 (表格 TB)</div>
-            <table id="table-tb" class="w-full text-left text-sm">
-                <thead class="bg-slate-50 border-b">
-                    <tr>
-                        <th class="p-4 border">全日</th><th class="p-4 border">姓名</th>
-                        <th class="p-4 border">日期</th><th class="p-4 border">時間</th>
-                        <th class="p-4 border">事由</th><th class="p-4 border">代理人</th>
-                        <th class="p-4 border">計算明細</th>
-                    </tr>
-                </thead>
-                <tbody id="tb-body" class="divide-y divide-slate-100"></tbody>
-            </table>
-        </section>
     </main>
 
-    <div id="adminPanel" class="hidden fixed inset-0 bg-slate-900/95 z-50 p-4 md:p-10 overflow-y-auto">
-        <div class="max-w-5xl mx-auto bg-white rounded-2xl shadow-2xl p-8">
+    <div id="adminPanel" class="hidden fixed inset-0 bg-slate-900/95 z-50 p-4 overflow-y-auto">
+        <div class="max-w-6xl mx-auto bg-white rounded-3xl shadow-2xl p-6 md:p-10 my-8">
             <div class="flex justify-between items-center border-b pb-6 mb-8">
-                <h2 class="text-3xl font-black text-slate-800">系統管理後台</h2>
+                <h2 class="text-2xl font-black text-slate-800">後台管理系統</h2>
                 <div id="authBox"></div>
-                <button id="btn-logout-close" onclick="logoutAndClose()" class="bg-red-500 text-white px-6 py-2 rounded-lg font-bold">登出並返回</button>
+                <button onclick="logoutAndClose()" class="bg-red-500 text-white px-5 py-2 rounded-xl font-bold text-sm shadow-lg">離開</button>
             </div>
             
-            <div id="adminContent" class="hidden">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
-                <div class="space-y-4">
-                    <h3 class="text-xl font-bold text-blue-600 border-l-4 border-blue-600 pl-3">教師資料維護</h3>
-                    <div class="grid grid-cols-2 gap-3">
-                        <input type="text" id="adm-tname" placeholder="教師姓名" class="border p-2 rounded">
-                        <select id="adm-tdegree" onchange="syncCertOptions()" class="border p-2 rounded">
-                            <option value="碩士">碩士</option><option value="大學">大學</option>
-                        </select>
-                        <select id="adm-tcert" class="border p-2 rounded"></select>
-                        <select id="adm-tclass" class="border p-2 rounded">
-                            <option value="彩虹班">彩虹班</option><option value="普通班">普通班</option>
-                        </select>
+            <div id="adminContent" class="hidden space-y-12">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
+                    <div class="space-y-4">
+                        <h3 class="text-lg font-bold text-blue-600 border-l-4 border-blue-600 pl-3">薪資計算用教師資料</h3>
+                        <div class="grid grid-cols-2 gap-3">
+                            <input type="text" id="adm-tname" placeholder="教師姓名" class="border p-2.5 rounded-lg text-sm">
+                            <select id="adm-tdegree" onchange="syncCertOptions()" class="border p-2.5 rounded-lg text-sm">
+                                <option value="碩士">碩士</option><option value="大學">大學</option>
+                            </select>
+                            <select id="adm-tcert" class="col-span-2 border p-2.5 rounded-lg text-sm"></select>
+                        </div>
+                        <button onclick="dbAddTeacher()" class="w-full bg-blue-600 text-white py-2.5 rounded-xl font-bold shadow-md hover:bg-blue-700">新增計薪教師</button>
+                        <div id="adm-teacherList" class="border rounded-xl h-48 overflow-y-auto bg-slate-50 p-2 space-y-1"></div>
                     </div>
-                    <button onclick="dbAddTeacher()" class="w-full bg-blue-600 text-white py-2 rounded font-bold">儲存教師</button>
-                    <div id="adm-teacherList" class="mt-4 border p-4 rounded h-48 overflow-y-auto bg-slate-50 space-y-2 text-sm"></div>
+
+                    <div class="space-y-4">
+                        <h3 class="text-lg font-bold text-orange-600 border-l-4 border-orange-600 pl-3">教師任教班級設定</h3>
+                        <div class="flex gap-2">
+                            <input type="text" id="adm-tc-name" placeholder="請輸入教師姓名" class="flex-1 border p-2.5 rounded-lg text-sm">
+                            <select id="adm-tc-type" class="border p-2.5 rounded-lg text-sm bg-white">
+                                <option value="普通班">普通班</option>
+                                <option value="彩虹班">彩虹班</option>
+                            </select>
+                            <button onclick="dbAddTeacherClass()" class="bg-orange-600 text-white px-6 py-2.5 rounded-xl font-bold">新增</button>
+                        </div>
+                        <div id="adm-tc-list" class="border rounded-xl h-48 overflow-y-auto bg-slate-50 divide-y divide-slate-200"></div>
+                    </div>
                 </div>
 
-                <div class="space-y-8">
-                    <div class="bg-slate-100 p-6 rounded-xl">
-                        <h3 class="text-xl font-bold mb-4">更新薪資 JSON</h3>
-                        <input type="file" id="adm-jsonFile" accept=".json" class="block w-full text-sm mb-4">
-                        <p id="salaryJsonNote" class="text-xs text-slate-500 italic">※ 上傳後會先顯示在下方，可編輯後再按「儲存薪資」才會寫入資料庫</p>
-                        <div class="flex gap-2 mb-3">
-                            <button id="btn-save-salary" onclick="rewriteAndSaveSalaryJSON()" class="bg-emerald-600 text-white px-4 py-2 rounded text-sm">儲存</button>
-                            <button onclick="expandAllSalary()" class="bg-slate-200 text-slate-800 px-3 py-1 rounded text-sm">展開</button>
-                            <button onclick="collapseAllSalary()" class="bg-slate-200 text-slate-800 px-3 py-1 rounded text-sm">摺疊</button>
-                        </div>
-                        <div id="salaryJsonDisplay" class="text-sm font-mono bg-white border p-3 rounded max-h-64 overflow-auto"></div>
+                <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                    <h3 class="text-lg font-bold text-slate-700 mb-4">薪資標準 JSON 編輯器</h3>
+                    <div class="flex items-center gap-3 mb-4">
+                        <button id="btn-save-salary" onclick="rewriteAndSaveSalaryJSON()" class="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-bold">儲存生效</button>
+                        <button onclick="expandAllSalary()" class="bg-white border px-3 py-2 rounded-lg text-xs">展開全部</button>
                     </div>
-                    <div class="space-y-4">
-                        <h3 class="text-xl font-bold text-emerald-600 border-l-4 border-emerald-600 pl-3">其他清單管理</h3>
-                        <div class="space-y-2">
-                            <div class="flex gap-2">
-                                <input type="text" id="adm-reason" placeholder="新事由" class="flex-1 border p-2 rounded text-sm">
-                                <select id="adm-reason-type" class="border p-2 rounded text-sm">
-                                    <option value="公派">公派</option>
-                                    <option value="自費">自費</option>
-                                </select>
-                                <button onclick="dbAddItem('leave_reasons')" class="bg-emerald-600 text-white px-4 rounded text-sm">新增</button>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <button onclick="deleteSelectedReasons()" class="bg-red-500 text-white px-3 py-1 rounded text-sm">刪除選取</button>
-                                <span class="text-xs text-slate-500">目前請假事由資料庫</span>
-                            </div>
-                            <div id="adm-reasonsList" class="mt-2 border p-2 rounded h-40 overflow-y-auto bg-white text-sm"></div>
-                        </div>
-                        <div class="space-y-2">
-                            <div class="flex gap-2">
-                                <input type="text" id="adm-proxy" placeholder="新代理人" class="flex-1 border p-2 rounded text-sm">
-                                <button onclick="dbAddItem('proxies')" class="bg-emerald-600 text-white px-4 rounded text-sm">新增</button>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <button onclick="deleteSelectedProxies()" class="bg-red-500 text-white px-3 py-1 rounded text-sm">刪除選取</button>
-                                <span class="text-xs text-slate-500">目前代理人資料庫</span>
-                            </div>
-                            <div id="adm-proxiesList" class="mt-2 border p-2 rounded h-40 overflow-y-auto bg-white text-sm"></div>
+                    <div id="salaryJsonDisplay" class="font-mono bg-white border p-4 rounded-xl max-h-80 overflow-auto text-[11px]"></div>
+                </div>
+
+                <div class="space-y-4">
+                    <h3 class="text-lg font-bold text-red-600 border-l-4 border-red-600 pl-3">歷史紀錄管理 (後台)</h3>
+                    <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+                        <div class="overflow-x-auto custom-scroll">
+                            <table id="table-admin-history" class="w-full text-left text-xs">
+                                <thead class="bg-slate-100 border-b">
+                                    <tr>
+                                        <th class="p-3 font-bold">日期</th>
+                                        <th class="p-3 font-bold">教師</th>
+                                        <th class="p-3 font-bold">代理人</th>
+                                        <th class="p-3 font-bold">明細摘要</th>
+                                        <th class="p-3 font-bold text-center">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="adm-history-body" class="divide-y divide-slate-100"></tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
-            </div>
             </div>
         </div>
     </div>
@@ -170,624 +188,161 @@
         import { getFirestore, doc, setDoc, getDoc, collection, addDoc, getDocs, deleteDoc, orderBy, query } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-        // --- 1. Firebase Config ---
         const firebaseConfig = {
-        apiKey: "AIzaSyDNeUfPFNjaAn6fjEyHwfnqRTYf7GbC6Vg",
-        authDomain: "teacher-salary-90c59.firebaseapp.com",
-        projectId: "teacher-salary-90c59",
-        storageBucket: "teacher-salary-90c59.firebasestorage.app",
-        messagingSenderId: "467756916534",
-        appId: "1:467756916534:web:a603b54bb3c9d9ab7edd97",
-        measurementId: "G-2BCV4PJZEX"
+            apiKey: "AIzaSyDNeUfPFNjaAn6fjEyHwfnqRTYf7GbC6Vg",
+            authDomain: "teacher-salary-90c59.firebaseapp.com",
+            projectId: "teacher-salary-90c59",
+            storageBucket: "teacher-salary-90c59.firebasestorage.app",
+            messagingSenderId: "467756916534",
+            appId: "1:467756916534:web:a603b54bb3c9d9ab7edd97"
         };
-
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        // --- 2. 初始化與日期判定 ---
+        window.lastCalcResult = null;
+        window.currentSalaryJSON = null;
+        window.teacherClassMap = {};
+
         window.onload = async () => {
-            setupSelectors();
+            setupDateSelectors();
             await refreshTADropdowns();
-            await refreshReasonsList();
-            await refreshProxiesList();
             await loadHistoryRecords();
-            // load existing salary JSON from Firestore for preview
-            const display = document.getElementById('salaryJsonDisplay');
-            if(display) {
-                await loadAndRenderSalaryJSON();
-            }
+            await loadTeacherClassMap();
+            if(document.getElementById('salaryJsonDisplay')) await loadAndRenderSalaryJSON();
         };
 
-        // --- Auth handling ---
+        // --- 權限與初始化 ---
         onAuthStateChanged(auth, (user) => {
-            const authBox = document.getElementById('authBox');
             const adminContent = document.getElementById('adminContent');
-            if(!authBox) return;
+            const authBox = document.getElementById('authBox');
             if(user) {
-                authBox.innerHTML = `<div class="text-sm">已登入: ${user.email}</div>`;
+                authBox.innerHTML = `<span class="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded">管理員登入中</span>`;
+                adminContent.classList.remove('hidden');
                 refreshAdminList();
-                refreshReasonsList();
-                refreshProxiesList();
-                if(adminContent) adminContent.classList.remove('hidden');
-                // enable save button when authenticated
-                const btnSave = document.getElementById('btn-save-salary');
-                if(btnSave) btnSave.disabled = false;
+                refreshTeacherClassList();
+                loadAdminHistoryRecords(); // 登入後載入後台紀錄
             } else {
-                authBox.innerHTML = `
-                    <div class="flex items-center gap-2">
-                        <input id="adm-email" placeholder="admin email" class="border p-1 rounded text-sm" />
-                        <input id="adm-pw" type="password" placeholder="password" class="border p-1 rounded text-sm" />
-                        <button id="adm-signin" onclick="signIn()" class="bg-emerald-600 text-white px-3 py-1 rounded text-sm">登入</button>
-                    </div>
-                `;
-                refreshReasonsList();
-                refreshProxiesList();
-                if(adminContent) adminContent.classList.add('hidden');
-                const btnSave = document.getElementById('btn-save-salary');
-                if(btnSave) btnSave.disabled = true;
+                authBox.innerHTML = `<div class="flex gap-1">
+                    <input id="adm-email" placeholder="Email" class="border px-2 py-1 text-xs rounded w-24">
+                    <input id="adm-pw" type="password" placeholder="Pass" class="border px-2 py-1 text-xs rounded w-20">
+                    <button onclick="signIn()" class="bg-slate-700 text-white px-3 py-1 rounded text-xs">登入</button>
+                </div>`;
+                adminContent.classList.add('hidden');
             }
         });
 
-        window.logoutAndClose = async () => {
-            try {
-                if(auth.currentUser) await signOut(auth);
-            } catch(e) {
-                // still attempt to close panel
-            }
-            const p = document.getElementById('adminPanel');
-            const adminContent = document.getElementById('adminContent');
-            if(adminContent) adminContent.classList.add('hidden');
-            if(p) p.classList.add('hidden');
-        };
+        // --- 核心功能：紀錄管理 ---
 
-        window.signIn = async () => {
-            const email = document.getElementById('adm-email')?.value || '';
-            const pw = document.getElementById('adm-pw')?.value || '';
-            if(!email || !pw) return alert('請輸入帳號與密碼');
-            try {
-                await signInWithEmailAndPassword(auth, email, pw);
-            } catch(e) {
-                alert('登入失敗: ' + e.message);
-            }
-        };
-
-        window.signOutUser = async () => {
-            try {
-                await signOut(auth);
-                const p = document.getElementById('adminPanel');
-                const adminContent = document.getElementById('adminContent');
-                if(adminContent) adminContent.classList.add('hidden');
-                if(p) p.classList.add('hidden');
-            } catch(e) {
-                alert('登出錯誤: ' + e.message);
-            }
-        };
-
-        function setupSelectors() {
-            const yOpts = [2025, 2026, 2027];
-            ['s', 'e'].forEach(p => {
-                const ys = document.getElementById(`ta-${p}y`);
-                const ms = document.getElementById(`ta-${p}m`);
-                yOpts.forEach(y => ys.innerHTML += `<option value="${y}" ${y===2026?'selected':''}>${y}</option>`);
-                for(let i=1; i<=12; i++) ms.innerHTML += `<option value="${i}">${i}</option>`;
-                syncDays(p);
+        // 載入前台紀錄 (TB)
+        async function loadHistoryRecords() {
+            const tbody = document.getElementById('tb-body');
+            const q = query(collection(db, "records"), orderBy("createdAt", "desc"));
+            const snap = await getDocs(q);
+            tbody.innerHTML = "";
+            snap.forEach(d => {
+                const data = d.data();
+                const r = tbody.insertRow();
+                [data.isFullDay?"✓":"-", data.teacherName, data.date, data.time, data.reason, data.proxy, data.detail].forEach(txt => {
+                    const c = r.insertCell(); c.className = "p-4 border-r whitespace-pre-line align-top"; c.innerText = txt;
+                });
             });
-            document.getElementById('ta-sm').value = new Date().getMonth() + 1;
-            syncDays('s');
-            document.getElementById('ta-sd').value = new Date().getDate();
         }
 
-        window.syncDays = (prefix) => {
-            const y = document.getElementById(`ta-${prefix}y`).value;
-            const m = document.getElementById(`ta-${prefix}m`).value;
-            const ds = document.getElementById(`ta-${prefix}d`);
-            const total = new Date(y, m, 0).getDate();
-            const cur = ds.value;
-            ds.innerHTML = "";
-            for(let d=1; d<=total; d++) ds.innerHTML += `<option value="${d}">${d}</option>`;
-            ds.value = Math.min(cur || 1, total);
+        // 載入後台紀錄 (具有刪除功能)
+        async function loadAdminHistoryRecords() {
+            const tbody = document.getElementById('adm-history-body');
+            const q = query(collection(db, "records"), orderBy("createdAt", "desc"));
+            const snap = await getDocs(q);
+            tbody.innerHTML = "";
+            
+            snap.forEach(d => {
+                const data = d.data();
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="p-3">${data.date}</td>
+                    <td class="p-3 font-bold">${data.teacherName}</td>
+                    <td class="p-3">${data.proxy}</td>
+                    <td class="p-3 text-slate-500 truncate max-w-xs">${data.detail.substring(0, 50)}...</td>
+                    <td class="p-3 text-center">
+                        <button onclick="deleteRecord('${d.id}')" class="bg-red-50 text-red-600 px-3 py-1 rounded-lg font-bold hover:bg-red-600 hover:text-white transition">
+                            刪除
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // 刪除紀錄邏輯
+        window.deleteRecord = async (id) => {
+            if(confirm("確定要永久刪除這筆紀錄嗎？此動作無法復原。")) {
+                try {
+                    await deleteDoc(doc(db, "records", id));
+                    alert("紀錄已刪除");
+                    await loadHistoryRecords(); // 同步更新前台
+                    await loadAdminHistoryRecords(); // 同步更新後台
+                } catch (error) {
+                    console.error("刪除失敗:", error);
+                    alert("刪除失敗，請檢查權限");
+                }
+            }
         };
 
-        window.syncUI = () => {
-            const isF = document.getElementById('ta-isFullDay').checked;
-            document.getElementById('ta-hours').disabled = isF;
-            document.getElementById('ta-hours').style.opacity = isF ? "0.3" : "1";
-            document.getElementById('row-end').classList.toggle('hidden', !isF);
-            document.getElementById('label-s').classList.toggle('hidden', !isF);
+        // --- 原有邏輯保持 (試算、班級對應等) ---
+        
+        async function loadTeacherClassMap() {
+            const snap = await getDocs(collection(db, "teacher_classes"));
+            window.teacherClassMap = {};
+            snap.forEach(d => { window.teacherClassMap[d.data().name] = d.data().classType; });
+        }
+
+        window.signIn = async () => {
+            const e = document.getElementById('adm-email').value, p = document.getElementById('adm-pw').value;
+            try { await signInWithEmailAndPassword(auth, e, p); } catch { alert("登入失敗"); }
         };
 
-        // --- 3. 核心計薪演算法 ---
+        window.logoutAndClose = async () => {
+            if(auth.currentUser) await signOut(auth);
+            document.getElementById('adminPanel').classList.add('hidden');
+        };
+
         window.handleCalculate = async () => {
             const tSel = document.getElementById('ta-teacher');
             const opt = tSel.options[tSel.selectedIndex];
-            if(!opt || !opt.value) return alert("請先選擇教師");
-
+            if(!opt || !opt.value) return alert("請選擇請假教師");
             const snap = await getDoc(doc(db, "settings", "salary_standard"));
-            if(!snap.exists()) return alert("請先上傳薪資 JSON 檔案");
+            if(!snap.exists()) return alert("請先設定薪資標準");
             const std = snap.data();
-
             const isF = document.getElementById('ta-isFullDay').checked;
             const detailBox = document.getElementById('ta-detail');
             let total = 0, detail = "";
+            const teacherName = opt.textContent;
+            const assignedClass = window.teacherClassMap[teacherName] || "普通班";
 
             if (!isF) {
                 const hrs = parseInt(document.getElementById('ta-hours').value);
                 total = 190 * hrs;
-                detail = `非全日時薪：190元 × ${hrs}小時 = ${total}元`;
+                detail = `【時薪模式】時薪 190 元 × ${hrs} 小時 = ${total} 元`;
             } else {
-                const sy = document.getElementById('ta-sy').value;
-                const sm = document.getElementById('ta-sm').value;
-                const dInM = new Date(sy, sm, 0).getDate();
-                const key = `除${dInM}天`;
-
                 const info = JSON.parse(opt.dataset.info);
+                const sy = document.getElementById('ta-sy').value, sm = document.getElementById('ta-sm').value;
+                const dInM = new Date(sy, sm, 0).getDate(), key = `除${dInM}天`;
                 const base = std[info.degree][info.cert][key];
-                const allowanceKey = info.degree === "碩士" ? "導師費" : "教保費";
-                const allow = std["每日加給"][allowanceKey][key];
-                const rain = info.class === "彩虹班" ? std["每日加給"]["彩虹班代課"][key] : 0;
-
+                const allowKey = info.degree === "碩士" ? "導師費" : "教保費";
+                const allow = std["每日加給"][allowKey][key];
+                const rain = assignedClass === "彩虹班" ? std["每日加給"]["彩虹班代課"][key] : 0;
                 const d1 = new Date(sy, sm-1, document.getElementById('ta-sd').value);
                 const d2 = new Date(document.getElementById('ta-ey').value, document.getElementById('ta-em').value-1, document.getElementById('ta-ed').value);
                 const days = Math.ceil((d2 - d1) / (1000*60*60*24)) + 1;
-
                 const daily = base + allow + rain;
                 total = daily * days;
-                detail = `[全日] 月份:${dInM}天 | 代課:${days}天\n${info.degree}(${base}) + ${allowanceKey}(${allow}) + 彩虹(${rain}) = 每日${daily}元\n總額: ${daily} × ${days} = ${total}元`;
+                detail = `[全日代課] 教師: ${teacherName} | 班級: ${assignedClass}\n天數: ${dInM} | 代理: ${days}天\n基準: ${base} + ${allowKey}: ${allow} + 彩虹: ${rain}\n每日 ${daily} 元 × ${days} 天 = ${total} 元`;
             }
             detailBox.innerText = detail;
             window.lastCalcResult = { total, detail, isF };
             document.getElementById('btn-add').disabled = false;
         };
-
-        // --- 4. 管理者後台邏輯 ---
-        window.toggleAdmin = () => {
-            const p = document.getElementById('adminPanel');
-            p.classList.toggle('hidden');
-            if(!p.classList.contains('hidden')) {
-                syncCertOptions();
-                refreshReasonsList();
-                refreshProxiesList();
-                const adminContent = document.getElementById('adminContent');
-                if(adminContent) adminContent.classList.toggle('hidden', !auth.currentUser);
-            }
-        };
-
-        window.syncCertOptions = () => {
-            const deg = document.getElementById('adm-tdegree').value;
-            const certS = document.getElementById('adm-tcert');
-            certS.innerHTML = "";
-            const opts = deg === "碩士" ? ["有教師證", "無教師證"] : ["有教師證", "僅有教育學分或教育學程", "均無"];
-            opts.forEach(o => certS.innerHTML += `<option value="${o}">${o}</option>`);
-        };
-
-        window.dbAddTeacher = async () => {
-            if(!auth.currentUser) return alert('請先以管理者身份登入');
-            const data = {
-                name: document.getElementById('adm-tname').value,
-                degree: document.getElementById('adm-tdegree').value,
-                cert: document.getElementById('adm-tcert').value,
-                class: document.getElementById('adm-tclass').value
-            };
-            await addDoc(collection(db, "teachers"), data);
-            alert("教師已儲存");
-            refreshAdminList();
-            refreshTADropdowns();
-        };
-
-        // Salary JSON: preview, edit, and save
-        window.currentSalaryJSON = null;
-
-        async function loadAndRenderSalaryJSON() {
-            const snap = await getDoc(doc(db, "settings", "salary_standard"));
-            if(!snap.exists()) {
-                document.getElementById('salaryJsonDisplay').innerText = '目前資料庫無薪資設定';
-                window.currentSalaryJSON = null;
-                return;
-            }
-            window.currentSalaryJSON = snap.data();
-            renderSalaryJSON(window.currentSalaryJSON);
-        }
-
-        document.getElementById('adm-jsonFile').onchange = async (e) => {
-            const file = e.target.files[0];
-            if(!file) return;
-            const reader = new FileReader();
-            reader.onload = async (evt) => {
-                try {
-                    const data = JSON.parse(evt.target.result);
-                    window.currentSalaryJSON = data;
-                    renderSalaryJSON(window.currentSalaryJSON);
-                    document.getElementById('salaryJsonNote').innerText = '檔案已讀取至預覽，請確認並按「儲存薪資」以寫入資料庫';
-                } catch(err) {
-                    alert('讀取 JSON 失敗: ' + err.message);
-                }
-            };
-            reader.readAsText(file);
-        };
-
-        function setDeepValue(obj, path, value) {
-            const parts = path.split('.');
-            let cur = obj;
-            for(let i=0;i<parts.length-1;i++) {
-                const p = parts[i];
-                if(!(p in cur)) cur[p] = {};
-                cur = cur[p];
-            }
-            const last = parts[parts.length-1];
-            // attempt to cast numeric if original was numeric
-            if(typeof cur[last] === 'number') {
-                const parsed = Number(value);
-                cur[last] = isNaN(parsed) ? value : parsed;
-            } else {
-                cur[last] = value;
-            }
-        }
-
-        // helpers for number formatting
-        const nf = new Intl.NumberFormat('en-US');
-        function formatNumberForDisplay(v) {
-            if(typeof v !== 'number') return v;
-            return nf.format(v);
-        }
-        function unformatNumberString(s) {
-            if(typeof s !== 'string') return s;
-            return Number(s.replace(/,/g, ''));
-        }
-
-        function renderSalaryJSON(obj) {
-            const container = document.getElementById('salaryJsonDisplay');
-            if(!obj) { container.innerText = '無資料'; return; }
-            container.innerHTML = '';
-            let _salaryBoxCounter = 0;
-            function makeToggle(targetId) {
-                const t = document.createElement('button');
-                t.className = 'mr-2 text-xs text-slate-500';
-                t.innerText = '▸';
-                t.setAttribute('data-salary-toggle', '1');
-                t.setAttribute('data-target-id', targetId);
-                t.onclick = () => {
-                    const target = document.getElementById(targetId);
-                    if(!target) return;
-                    const expanded = t.innerText === '▾';
-                    if(expanded) {
-                        t.innerText = '▸';
-                        target.style.display = 'none';
-                    } else {
-                        t.innerText = '▾';
-                        target.style.display = 'block';
-                    }
-                };
-                t.title = '摺疊/展開';
-                return t;
-            }
-
-            function orderedKeys(node) {
-                const keys = Object.keys(node || {});
-                return keys.sort((a,b) => {
-                    // put 碩士 first
-                    if(a === '碩士' && b !== '碩士') return -1;
-                    if(b === '碩士' && a !== '碩士') return 1;
-                    // put 學士 or 大學 second
-                    const aIsBachelor = (a === '學士' || a === '大學');
-                    const bIsBachelor = (b === '學士' || b === '大學');
-                    if(aIsBachelor && !bIsBachelor) return -1;
-                    if(bIsBachelor && !aIsBachelor) return 1;
-                    // otherwise alphabetical
-                    return a.localeCompare(b, 'zh-Hant');
-                });
-            }
-
-            function walk(node, parentEl, prefix) {
-                orderedKeys(node).forEach(key => {
-                    const val = node[key];
-                    const path = prefix ? `${prefix}.${key}` : key;
-
-                    if(val && typeof val === 'object' && !Array.isArray(val)) {
-                        const wrapper = document.createElement('div');
-                        wrapper.className = 'mb-2';
-                        const header = document.createElement('div');
-                        header.className = 'flex items-center';
-                        const contentBox = document.createElement('div');
-                        const boxId = `salary_box_${_salaryBoxCounter++}`;
-                        contentBox.id = boxId;
-                        contentBox.className = 'pl-4 border-l border-slate-100';
-                        // default collapsed
-                        contentBox.style.display = 'none';
-                        header.appendChild(makeToggle(boxId));
-                        const h = document.createElement('div');
-                        h.className = 'font-bold text-slate-700';
-                        h.innerText = key;
-                        header.appendChild(h);
-                        wrapper.appendChild(header);
-                        wrapper.appendChild(contentBox);
-                        (parentEl || container).appendChild(wrapper);
-                        walk(val, contentBox, path);
-                    } else if(Array.isArray(val)) {
-                        const wrapper = document.createElement('div');
-                        wrapper.className = 'mb-2';
-                        const header = document.createElement('div');
-                        header.className = 'flex items-center';
-                        const contentBox = document.createElement('div');
-                        const boxId = `salary_box_${_salaryBoxCounter++}`;
-                        contentBox.id = boxId;
-                        contentBox.className = 'pl-4 border-l border-slate-100';
-                        // default collapsed
-                        contentBox.style.display = 'none';
-                        header.appendChild(makeToggle(boxId));
-                        const h = document.createElement('div');
-                        h.className = 'font-bold text-slate-700';
-                        h.innerText = key + ' [array]';
-                        header.appendChild(h);
-                        wrapper.appendChild(header);
-                        wrapper.appendChild(contentBox);
-                        (parentEl || container).appendChild(wrapper);
-                        val.forEach((it, idx) => {
-                            const subWrap = document.createElement('div');
-                            subWrap.className = 'mb-1 pl-3';
-                            contentBox.appendChild(subWrap);
-                            if(it && typeof it === 'object') {
-                                const subHdr = document.createElement('div');
-                                subHdr.className = 'font-semibold';
-                                subHdr.innerText = `[${idx}]`;
-                                subWrap.appendChild(subHdr);
-                                walk(it, subWrap, `${path}.${idx}`);
-                            } else {
-                                const line = document.createElement('div');
-                                line.className = 'py-1 flex items-center';
-                                const lbl = document.createElement('div'); lbl.className = 'text-slate-600 w-40'; lbl.innerText = `${key}[${idx}]:`;
-                                const input = document.createElement('input');
-                                input.className = 'border px-1 py-0.5 rounded text-sm';
-                                input.value = typeof val[idx] === 'number' ? formatNumberForDisplay(val[idx]) : val[idx];
-                                input.setAttribute('data-path', `${path}.${idx}`);
-                                input.addEventListener('focus', (e)=>{ if(typeof val[idx] === 'number') e.target.value = val[idx]; });
-                                input.addEventListener('blur', (e)=>{ if(!isNaN(unformatNumberString(e.target.value))) e.target.value = formatNumberForDisplay(unformatNumberString(e.target.value)); setDeepValue(window.currentSalaryJSON, e.target.dataset.path, unformatNumberString(e.target.value)); });
-                                line.appendChild(lbl); line.appendChild(input);
-                                subWrap.appendChild(line);
-                            }
-                        });
-                    } else {
-                        const row = document.createElement('div');
-                        row.className = 'py-1 flex items-center';
-                        row.setAttribute('data-key', key);
-                        row.setAttribute('data-path', path);
-                        const label = document.createElement('div'); label.className = 'text-slate-600 w-40'; label.innerText = key + ':';
-                        const input = document.createElement('input');
-                        input.className = 'border px-1 py-0.5 rounded text-sm flex-1';
-                        if(typeof val === 'number') {
-                            input.value = formatNumberForDisplay(val);
-                            input.dataset.isNumber = '1';
-                        } else {
-                            input.value = val;
-                        }
-                        input.setAttribute('data-path', path);
-                        input.addEventListener('focus', (e)=>{ if(e.target.dataset.isNumber) e.target.value = String(unformatNumberString(e.target.value)); });
-                        input.addEventListener('blur', (e)=>{ if(e.target.dataset.isNumber) { const num = unformatNumberString(e.target.value); e.target.value = isNaN(num) ? e.target.value : formatNumberForDisplay(num); setDeepValue(window.currentSalaryJSON, e.target.dataset.path, isNaN(num)? e.target.value : num); } else { setDeepValue(window.currentSalaryJSON, e.target.dataset.path, e.target.value); } });
-                        row.appendChild(label);
-                        row.appendChild(input);
-                        (parentEl || container).appendChild(row);
-                    }
-                });
-            }
-            walk(obj, null, '');
-            // attach delegated click handler for toggles (once)
-            const display = document.getElementById('salaryJsonDisplay');
-            if(display && !display.dataset.salaryHandlerAttached) {
-                display.addEventListener('click', (e) => {
-                    const btn = e.target.closest('button[data-salary-toggle]');
-                    if(!btn) return;
-                    const targetId = btn.getAttribute('data-target-id');
-                    const target = targetId ? document.getElementById(targetId) : null;
-                    if(!target) return;
-                    const expanded = btn.innerText === '▾';
-                    if(expanded) {
-                        btn.innerText = '▸';
-                        target.style.display = 'none';
-                    } else {
-                        btn.innerText = '▾';
-                        target.style.display = 'block';
-                    }
-                });
-                display.dataset.salaryHandlerAttached = '1';
-            }
-        }
-
-        // expand/collapse helpers
-        function expandAllSalary() {
-            const display = document.getElementById('salaryJsonDisplay');
-            if(!display) return;
-            display.querySelectorAll('button[data-salary-toggle]').forEach(btn => {
-                btn.innerText = '▾';
-                const header = btn.parentElement;
-                const content = header ? header.nextElementSibling : null;
-                if(content) content.style.display = 'block';
-            });
-        }
-        function collapseAllSalary() {
-            const display = document.getElementById('salaryJsonDisplay');
-            if(!display) return;
-            display.querySelectorAll('button[data-salary-toggle]').forEach(btn => {
-                btn.innerText = '▸';
-                const header = btn.parentElement;
-                const content = header ? header.nextElementSibling : null;
-                if(content) content.style.display = 'none';
-            });
-        }
-
-        // expose to global for inline onclick handlers (modules aren't global)
-        window.expandAllSalary = expandAllSalary;
-        window.collapseAllSalary = collapseAllSalary;
-
-        
-
-        // shortcut that writes current JSON and also forces immediate overwrite behavior
-        window.rewriteAndSaveSalaryJSON = async () => {
-            if(!auth.currentUser) return alert('請先登入管理者');
-            if(!window.currentSalaryJSON) return alert('無可儲存的資料');
-            if(!confirm('確定立即覆寫並生效？')) return;
-            try {
-                await setDoc(doc(db, 'settings', 'salary_standard'), window.currentSalaryJSON);
-                alert('已覆寫並儲存');
-            } catch(e) { alert('錯誤: '+e.message); }
-        };
-
-        async function refreshAdminList() {
-            const list = document.getElementById('adm-teacherList');
-            list.innerHTML = "載入中...";
-            if(!auth.currentUser) {
-                list.innerHTML = '<div class="p-2 text-sm text-red-500">請先登入管理者帳號</div>';
-                return;
-            }
-            const snap = await getDocs(query(collection(db, "teachers"), orderBy("name")));
-            list.innerHTML = "";
-            snap.forEach(d => {
-                const t = d.data();
-                list.innerHTML += `<div class="flex justify-between p-2 bg-white rounded border">
-                    <span>${t.name} (${t.degree}/${t.cert})</span>
-                    <button onclick="deleteDocById('teachers','${d.id}')" class="text-red-500 font-bold">刪除</button>
-                </div>`;
-            });
-        }
-
-        async function refreshTADropdowns() {
-            // 教師選單
-            const tSel = document.getElementById('ta-teacher');
-            const tSnap = await getDocs(query(collection(db, "teachers"), orderBy("name")));
-            tSel.innerHTML = '<option value="">請選擇...</option>';
-            tSnap.forEach(d => {
-                const opt = document.createElement('option');
-                opt.value = d.id;
-                opt.dataset.info = JSON.stringify(d.data());
-                opt.textContent = d.data().name;
-                tSel.appendChild(opt);
-            });
-            // 填充事由與代理人下拉選單
-            const reasonSel = document.getElementById('ta-reason');
-            const proxySel = document.getElementById('ta-proxy');
-            reasonSel.innerHTML = '';
-            proxySel.innerHTML = '';
-            const rSnap = await getDocs(query(collection(db, 'leave_reasons')));
-            rSnap.forEach(d => {
-                const r = d.data();
-                const opt = document.createElement('option');
-                opt.value = r.text || '';
-                opt.textContent = r.type ? `${r.text} (${r.type})` : r.text;
-                reasonSel.appendChild(opt);
-            });
-            const pSnap = await getDocs(query(collection(db, 'proxies')));
-            pSnap.forEach(d => {
-                const p = d.data();
-                const opt = document.createElement('option');
-                opt.value = p.text || '';
-                opt.textContent = p.text || '';
-                proxySel.appendChild(opt);
-            });
-        }
-
-        // --- Other lists management ---
-        window.dbAddItem = async (col) => {
-            if(!auth.currentUser) return alert('請先登入管理者');
-            if(col === 'leave_reasons') {
-                const text = document.getElementById('adm-reason').value.trim();
-                const type = document.getElementById('adm-reason-type').value;
-                if(!text) return alert('請輸入事由');
-                await addDoc(collection(db, 'leave_reasons'), { text, type });
-                document.getElementById('adm-reason').value = '';
-                refreshReasonsList();
-                refreshTADropdowns();
-                return;
-            }
-            if(col === 'proxies') {
-                const text = document.getElementById('adm-proxy').value.trim();
-                if(!text) return alert('請輸入代理人');
-                await addDoc(collection(db, 'proxies'), { text });
-                document.getElementById('adm-proxy').value = '';
-                refreshProxiesList();
-                refreshTADropdowns();
-                return;
-            }
-        };
-
-        async function refreshReasonsList() {
-            const container = document.getElementById('adm-reasonsList');
-            container.innerHTML = '載入中...';
-            const snap = await getDocs(query(collection(db, 'leave_reasons')));
-            container.innerHTML = '';
-            snap.forEach(d => {
-                const it = d.data();
-                const row = document.createElement('div');
-                row.className = 'flex items-center justify-between py-1';
-                row.innerHTML = `<label class="flex items-center gap-2"><input type="checkbox" data-id="${d.id}" class="reason-chk"> <span>${it.text} ${it.type?`(${it.type})`:''}</span></label>`;
-                container.appendChild(row);
-            });
-        }
-
-        async function refreshProxiesList() {
-            const container = document.getElementById('adm-proxiesList');
-            container.innerHTML = '載入中...';
-            const snap = await getDocs(query(collection(db, 'proxies')));
-            container.innerHTML = '';
-            snap.forEach(d => {
-                const it = d.data();
-                const row = document.createElement('div');
-                row.className = 'flex items-center justify-between py-1';
-                row.innerHTML = `<label class="flex items-center gap-2"><input type="checkbox" data-id="${d.id}" class="proxy-chk"> <span>${it.text}</span></label>`;
-                container.appendChild(row);
-            });
-        }
-
-        window.deleteSelectedReasons = async () => {
-            if(!auth.currentUser) return alert('請先登入管理者');
-            const checks = Array.from(document.querySelectorAll('.reason-chk'));
-            const ids = checks.filter(c=>c.checked).map(c=>c.dataset.id);
-            if(ids.length===0) return alert('請先勾選要刪除項目');
-            if(!confirm('確定刪除選取項目？')) return;
-            for(const id of ids) await deleteDoc(doc(db, 'leave_reasons', id));
-            refreshReasonsList();
-            refreshTADropdowns();
-        };
-
-        window.deleteSelectedProxies = async () => {
-            if(!auth.currentUser) return alert('請先登入管理者');
-            const checks = Array.from(document.querySelectorAll('.proxy-chk'));
-            const ids = checks.filter(c=>c.checked).map(c=>c.dataset.id);
-            if(ids.length===0) return alert('請先勾選要刪除項目');
-            if(!confirm('確定刪除選取項目？')) return;
-            for(const id of ids) await deleteDoc(doc(db, 'proxies', id));
-            refreshProxiesList();
-            refreshTADropdowns();
-        };
-
-        async function loadHistoryRecords() {
-            const tbody = document.getElementById('tb-body');
-            tbody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-slate-500">載入中...</td></tr>';
-            try {
-                const q = query(collection(db, "records"), orderBy("createdAt", "desc"));
-                const snapshot = await getDocs(q);
-                tbody.innerHTML = "";
-                snapshot.forEach(doc => {
-                    const d = doc.data();
-                    const row = tbody.insertRow();
-                    const cells = [
-                        d.isFullDay ? "✓" : "-",
-                        d.teacherName,
-                        d.date,
-                        d.time,
-                        d.reason,
-                        d.proxy,
-                        d.detail
-                    ];
-                    cells.forEach(text => {
-                        const c = row.insertCell();
-                        c.className = "p-4 border";
-                        c.innerText = text;
-                    });
-                });
-            } catch(e) {
-                console.error(e);
-                tbody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-red-500">載入失敗</td></tr>';
-            }
-        }
 
         window.saveRecord = async () => {
             if(!window.lastCalcResult) return;
@@ -801,28 +356,166 @@
                 detail: window.lastCalcResult.detail,
                 createdAt: new Date().toISOString()
             };
-            try {
-                await addDoc(collection(db, "records"), record);
-                await loadHistoryRecords();
-                document.getElementById('btn-add').disabled = true;
-            } catch(e) {
-                alert("儲存失敗: " + e.message);
-            }
+            await addDoc(collection(db, "records"), record);
+            alert("已儲存紀錄"); 
+            await loadHistoryRecords();
+            if(auth.currentUser) await loadAdminHistoryRecords();
+            document.getElementById('btn-add').disabled = true;
+        };
+
+        // --- UI 控制與其他輔助功能 ---
+        function setupDateSelectors() {
+            const yOpts = [2025, 2026, 2027];
+            ['s', 'e'].forEach(p => {
+                const ys = document.getElementById(`ta-${p}y`), ms = document.getElementById(`ta-${p}m`);
+                yOpts.forEach(y => ys.innerHTML += `<option value="${y}" ${y===2026?'selected':''}>${y}年</option>`);
+                for(let i=1; i<=12; i++) ms.innerHTML += `<option value="${i}">${i}月</option>`;
+                syncDays(p);
+            });
+            document.getElementById('ta-sm').value = new Date().getMonth() + 1;
+            syncDays('s');
+            document.getElementById('ta-sd').value = new Date().getDate();
+        }
+
+        window.syncDays = (p) => {
+            const y = document.getElementById(`ta-${p}y`).value, m = document.getElementById(`ta-${p}m`).value;
+            const ds = document.getElementById(`ta-${p}d`), total = new Date(y, m, 0).getDate();
+            const cur = ds.value; ds.innerHTML = "";
+            for(let d=1; d<=total; d++) ds.innerHTML += `<option value="${d}">${d}日</option>`;
+            ds.value = Math.min(cur || 1, total);
+        };
+
+        window.syncUI = () => {
+            const isF = document.getElementById('ta-isFullDay').checked;
+            document.getElementById('ta-hours').disabled = isF;
+            document.getElementById('ta-hours').parentElement.style.opacity = isF ? "0.3" : "1";
+            document.getElementById('row-end').classList.toggle('hidden', !isF);
+            document.getElementById('label-s').classList.toggle('hidden', !isF);
         };
 
         window.exportToExcel = () => {
             const wb = XLSX.utils.table_to_book(document.getElementById('table-tb'));
-            XLSX.writeFile(wb, "薪資核算明細.xlsx");
+            XLSX.writeFile(wb, "薪資紀錄.xlsx");
         };
 
-        window.deleteDocById = async (col, id) => {
-            if(!auth.currentUser) return alert('請先登入管理者');
-            if(confirm("確定刪除？")) {
-                await deleteDoc(doc(db, col, id));
-                refreshAdminList();
-                refreshTADropdowns();
-            }
+        window.dbAddTeacherClass = async () => {
+            const name = document.getElementById('adm-tc-name').value.trim();
+            const type = document.getElementById('adm-tc-type').value;
+            if(!name) return alert("請輸入教師姓名");
+            await addDoc(collection(db, "teacher_classes"), { name, classType: type, createdAt: new Date().toISOString() });
+            document.getElementById('adm-tc-name').value = "";
+            await loadTeacherClassMap();
+            refreshTeacherClassList();
         };
+
+        async function refreshTeacherClassList() {
+            const container = document.getElementById('adm-tc-list');
+            const snap = await getDocs(query(collection(db, "teacher_classes"), orderBy("name")));
+            container.innerHTML = "";
+            snap.forEach(d => {
+                const item = document.createElement('div');
+                item.className = "flex justify-between items-center p-3 hover:bg-white";
+                item.innerHTML = `<div><span class="font-bold">${d.data().name}</span> <span class="ml-2 text-xs text-slate-400">${d.data().classType}</span></div>
+                                  <button onclick="deleteTeacherClass('${d.id}')" class="text-red-400 font-bold text-xs">刪除</button>`;
+                container.appendChild(item);
+            });
+        }
+
+        window.deleteTeacherClass = async (id) => {
+            if(confirm("確定刪除班級對應？")) { await deleteDoc(doc(db, "teacher_classes", id)); await loadTeacherClassMap(); refreshTeacherClassList(); }
+        };
+
+        window.dbAddTeacher = async () => {
+            const data = {
+                name: document.getElementById('adm-tname').value,
+                degree: document.getElementById('adm-tdegree').value,
+                cert: document.getElementById('adm-tcert').value
+            };
+            if(!data.name) return alert("請填姓名");
+            await addDoc(collection(db, "teachers"), data);
+            refreshAdminList(); refreshTADropdowns();
+        };
+
+        async function refreshAdminList() {
+            const list = document.getElementById('adm-teacherList');
+            const snap = await getDocs(query(collection(db, "teachers"), orderBy("name")));
+            list.innerHTML = "";
+            snap.forEach(d => {
+                list.innerHTML += `<div class="flex justify-between p-2 bg-white rounded border text-xs mb-1">
+                    <span>${d.data().name} (${d.data().degree}/${d.data().cert})</span>
+                    <button onclick="deleteDocById('teachers','${d.id}')" class="text-red-500 font-bold px-2">刪除</button>
+                </div>`;
+            });
+        }
+
+        async function refreshTADropdowns() {
+            const tSel = document.getElementById('ta-teacher'), rSel = document.getElementById('ta-reason'), pSel = document.getElementById('ta-proxy');
+            tSel.innerHTML = '<option value="">請選擇...</option>';
+            const tSnap = await getDocs(query(collection(db, "teachers"), orderBy("name")));
+            tSnap.forEach(d => {
+                const o = document.createElement('option');
+                o.value = d.id; o.dataset.info = JSON.stringify(d.data()); o.textContent = d.data().name;
+                tSel.appendChild(o);
+            });
+            rSel.innerHTML = '<option>事假(自費)</option><option>病假(自費)</option><option>公假(公派)</option><option>公假(自費)</option>';
+            pSel.innerHTML = '<option>校內代理人</option><option>外聘人員</option>';
+        }
+
+        async function loadAndRenderSalaryJSON() {
+            const snap = await getDoc(doc(db, "settings", "salary_standard"));
+            if(snap.exists()) { window.currentSalaryJSON = snap.data(); renderSalaryJSON(window.currentSalaryJSON); }
+        }
+
+        function renderSalaryJSON(obj) {
+            const container = document.getElementById('salaryJsonDisplay'); container.innerHTML = '';
+            let _id = 0;
+            function walk(node, parent, prefix) {
+                Object.keys(node).sort().forEach(k => {
+                    const v = node[k], path = prefix ? `${prefix}.${k}` : k;
+                    if(v && typeof v === 'object' && !Array.isArray(v)) {
+                        const boxId = `json_${_id++}`;
+                        const div = document.createElement('div');
+                        div.innerHTML = `<div class="font-bold py-1"><span data-target-id="${boxId}" data-salary-toggle="1" class="mr-1">▸</span>${k}</div><div id="${boxId}" class="pl-4 border-l hidden"></div>`;
+                        parent.appendChild(div);
+                        walk(v, div.querySelector(`#${boxId}`), path);
+                    } else {
+                        const row = document.createElement('div'); row.className = 'flex items-center gap-2 py-0.5';
+                        row.innerHTML = `<span class="text-slate-400 w-24 truncate text-[10px]">${k}:</span><input class="border px-1 flex-1 text-blue-600 font-bold" value="${v}" data-path="${path}">`;
+                        row.querySelector('input').onblur = (e) => {
+                            const val = isNaN(e.target.value) ? e.target.value : Number(e.target.value);
+                            const parts = e.target.dataset.path.split('.');
+                            let cur = window.currentSalaryJSON;
+                            for(let i=0; i<parts.length-1; i++) cur = cur[parts[i]];
+                            cur[parts[parts.length-1]] = val;
+                        };
+                        parent.appendChild(row);
+                    }
+                });
+            }
+            walk(obj, container, '');
+            container.onclick = (e) => {
+                const btn = e.target.closest('[data-salary-toggle]');
+                if(btn) { const t = document.getElementById(btn.dataset.targetId); btn.innerText = t.classList.toggle('hidden') ? '▸' : '▾'; }
+            };
+        }
+
+        window.rewriteAndSaveSalaryJSON = async () => {
+            if(confirm('確認存檔？')) await setDoc(doc(db, 'settings', 'salary_standard'), window.currentSalaryJSON);
+            alert('已存至雲端');
+        };
+
+        window.expandAllSalary = () => document.querySelectorAll('[data-salary-toggle]').forEach(b => { b.innerText='▾'; document.getElementById(b.dataset.targetId).classList.remove('hidden'); });
+        window.toggleAdmin = () => document.getElementById('adminPanel').classList.toggle('hidden');
+        window.syncCertOptions = () => {
+            const deg = document.getElementById('adm-tdegree').value, sel = document.getElementById('adm-tcert');
+            sel.innerHTML = "";
+            const opts = deg === "碩士" ? ["有教師證", "無教師證"] : ["有教師證", "僅有教育學分或教育學程", "均無"];
+            opts.forEach(o => sel.innerHTML += `<option value="${o}">${o}</option>`);
+        };
+        window.deleteDocById = async (col, id) => {
+            if(confirm("確定刪除？")) { await deleteDoc(doc(db, col, id)); refreshAdminList(); refreshTADropdowns(); }
+        };
+
     </script>
 </body>
 </html>

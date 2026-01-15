@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>幼兒園代課薪資管理系統 - 專業管理版</title>
+    <title>幼兒園代課薪資管理系統</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
     <style>
         #table-tb, #table-admin-history { min-width: 900px; }
         .custom-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -36,11 +35,11 @@
             <div class="p-6 space-y-5">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-bold text-slate-600 mb-1">請假教師</label>
+                        <label class="block text-sm font-bold text-slate-600 mb-1">請假教師 (從任教班級庫載入)</label>
                         <select id="ta-teacher" class="w-full border-2 border-slate-100 rounded-xl p-3 bg-slate-50 focus:border-blue-500 outline-none transition"></select>
                     </div>
                     <div>
-                        <label class="block text-sm font-bold text-slate-600 mb-1">代理人</label>
+                        <label class="block text-sm font-bold text-slate-600 mb-1">代理人 (從薪資資料庫載入)</label>
                         <select id="ta-proxy" class="w-full border-2 border-slate-100 rounded-xl p-3 bg-slate-50 focus:border-blue-500 outline-none transition"></select>
                     </div>
                 </div>
@@ -87,11 +86,10 @@
             </div>
         </section>
 
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <button onclick="handleCalculate()" class="bg-blue-600 text-white px-6 py-4 rounded-2xl font-bold shadow-lg hover:bg-blue-700 transition active:scale-95">1. 計算薪資</button>
-            <button id="btn-add" onclick="saveRecord()" disabled class="bg-emerald-600 text-white px-6 py-4 rounded-2xl font-bold shadow-lg disabled:opacity-30 transition active:scale-95">2. 儲存紀錄</button>
-            <button onclick="exportToExcel()" class="bg-slate-700 text-white px-6 py-4 rounded-2xl font-bold shadow-lg transition active:scale-95">匯出 Excel</button>
-        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <button onclick="handleCalculate()" class="bg-blue-600 text-white px-6 py-4 rounded-2xl font-bold shadow-lg hover:bg-blue-700 transition active:scale-95">計算薪資</button>
+            <button id="btn-add" onclick="saveRecord()" disabled class="bg-emerald-600 text-white px-6 py-4 rounded-2xl font-bold shadow-lg disabled:opacity-30 transition active:scale-95">儲存紀錄</button>
+            </div>
 
         <section class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
             <div class="bg-slate-700 text-white px-5 py-3 font-bold text-sm">歷史紀錄 (TB)</div>
@@ -125,7 +123,7 @@
             <div id="adminContent" class="hidden space-y-12">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
                     <div class="space-y-4">
-                        <h3 class="text-lg font-bold text-blue-600 border-l-4 border-blue-600 pl-3">薪資計算用教師資料</h3>
+                        <h3 class="text-lg font-bold text-blue-600 border-l-4 border-blue-600 pl-3">薪資計算用教師資料 (代理人來源)</h3>
                         <div class="grid grid-cols-2 gap-3">
                             <input type="text" id="adm-tname" placeholder="教師姓名" class="border p-2.5 rounded-lg text-sm">
                             <select id="adm-tdegree" onchange="syncCertOptions()" class="border p-2.5 rounded-lg text-sm">
@@ -138,7 +136,7 @@
                     </div>
 
                     <div class="space-y-4">
-                        <h3 class="text-lg font-bold text-orange-600 border-l-4 border-orange-600 pl-3">教師任教班級設定</h3>
+                        <h3 class="text-lg font-bold text-orange-600 border-l-4 border-orange-600 pl-3">教師任教班級設定 (請假者來源)</h3>
                         <div class="flex gap-2">
                             <input type="text" id="adm-tc-name" placeholder="請輸入教師姓名" class="flex-1 border p-2.5 rounded-lg text-sm">
                             <select id="adm-tc-type" class="border p-2.5 rounded-lg text-sm bg-white">
@@ -156,6 +154,7 @@
                     <div class="flex items-center gap-3 mb-4">
                         <button id="btn-save-salary" onclick="rewriteAndSaveSalaryJSON()" class="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-bold">儲存生效</button>
                         <button onclick="expandAllSalary()" class="bg-white border px-3 py-2 rounded-lg text-xs">展開全部</button>
+                        <button onclick="collapseAllSalary()" class="bg-white border px-3 py-2 rounded-lg text-xs">收折全部</button>
                     </div>
                     <div id="salaryJsonDisplay" class="font-mono bg-white border p-4 rounded-xl max-h-80 overflow-auto text-[11px]"></div>
                 </div>
@@ -202,17 +201,14 @@
 
         window.lastCalcResult = null;
         window.currentSalaryJSON = null;
-        window.teacherClassMap = {};
 
         window.onload = async () => {
             setupDateSelectors();
             await refreshTADropdowns();
             await loadHistoryRecords();
-            await loadTeacherClassMap();
             if(document.getElementById('salaryJsonDisplay')) await loadAndRenderSalaryJSON();
         };
 
-        // --- 權限與初始化 ---
         onAuthStateChanged(auth, (user) => {
             const adminContent = document.getElementById('adminContent');
             const authBox = document.getElementById('authBox');
@@ -221,7 +217,7 @@
                 adminContent.classList.remove('hidden');
                 refreshAdminList();
                 refreshTeacherClassList();
-                loadAdminHistoryRecords(); // 登入後載入後台紀錄
+                loadAdminHistoryRecords();
             } else {
                 authBox.innerHTML = `<div class="flex gap-1">
                     <input id="adm-email" placeholder="Email" class="border px-2 py-1 text-xs rounded w-24">
@@ -232,9 +228,113 @@
             }
         });
 
-        // --- 核心功能：紀錄管理 ---
+        async function refreshTADropdowns() {
+            const tSel = document.getElementById('ta-teacher');
+            const pSel = document.getElementById('ta-proxy');
+            const rSel = document.getElementById('ta-reason');
 
-        // 載入前台紀錄 (TB)
+            tSel.innerHTML = '<option value="">請選擇請假教師...</option>';
+            const tcSnap = await getDocs(query(collection(db, "teacher_classes"), orderBy("name")));
+            tcSnap.forEach(d => {
+                const o = document.createElement('option');
+                o.value = d.id;
+                o.dataset.classType = d.data().classType;
+                o.textContent = `${d.data().name} (${d.data().classType})`;
+                tSel.appendChild(o);
+            });
+
+            pSel.innerHTML = '<option value="">請選擇代理人...</option>';
+            const tSnap = await getDocs(query(collection(db, "teachers"), orderBy("name")));
+            tSnap.forEach(d => {
+                const o = document.createElement('option');
+                o.value = d.id;
+                o.dataset.info = JSON.stringify(d.data());
+                o.textContent = `${d.data().name} (${d.data().degree})`;
+                pSel.appendChild(o);
+            });
+
+            rSel.innerHTML = '<option>事假(自費)</option><option>病假(自費)</option><option>公假(公派)</option><option>公假(自費)</option>';
+        }
+
+        window.handleCalculate = async () => {
+            const tSel = document.getElementById('ta-teacher');
+            const pSel = document.getElementById('ta-proxy');
+            
+            if(!tSel.value) return alert("請選擇請假教師");
+            if(!pSel.value) return alert("請選擇代理人");
+
+            const snap = await getDoc(doc(db, "settings", "salary_standard"));
+            if(!snap.exists()) return alert("請先設定薪資標準");
+            
+            const std = snap.data();
+            const isF = document.getElementById('ta-isFullDay').checked;
+            const detailBox = document.getElementById('ta-detail');
+            
+            const leaveTeacherName = tSel.options[tSel.selectedIndex].text.split(' ')[0];
+            const assignedClass = tSel.options[tSel.selectedIndex].dataset.classType;
+            
+            const proxyOpt = pSel.options[pSel.selectedIndex];
+            const proxyInfo = JSON.parse(proxyOpt.dataset.info);
+            const proxyName = proxyOpt.text.split(' ')[0];
+
+            let total = 0, detail = "";
+            let startDateStr = `${document.getElementById('ta-sy').value}/${document.getElementById('ta-sm').value}/${document.getElementById('ta-sd').value}`;
+            let endDateStr = "";
+
+            if (!isF) {
+                const hrs = parseInt(document.getElementById('ta-hours').value);
+                total = 190 * hrs;
+                detail = `【時薪模式】\n代理人：${proxyName}\n時薪 190 元 × ${hrs} 小時 = ${total} 元`;
+            } else {
+                const sy = document.getElementById('ta-sy').value, sm = document.getElementById('ta-sm').value;
+                const ey = document.getElementById('ta-ey').value, em = document.getElementById('ta-em').value, ed = document.getElementById('ta-ed').value;
+                endDateStr = `${ey}/${em}/${ed}`;
+                
+                const dInM = new Date(sy, sm, 0).getDate();
+                const key = `除${dInM}天`;
+                const base = std[proxyInfo.degree][proxyInfo.cert][key];
+                const allowKey = proxyInfo.degree === "碩士" ? "導師費" : "教保費";
+                const allow = std["每日加給"][allowKey][key];
+                const rain = assignedClass === "彩虹班" ? std["每日加給"]["彩虹班代課"][key] : 0;
+                
+                const d1 = new Date(sy, sm-1, document.getElementById('ta-sd').value);
+                const d2 = new Date(ey, em-1, ed);
+                const days = Math.ceil((d2 - d1) / (1000*60*60*24)) + 1;
+                
+                const daily = base + allow + rain;
+                total = daily * days;
+                detail = `[全日代課] 請假教師: ${leaveTeacherName} (${assignedClass})\n代理人: ${proxyName} (${proxyInfo.degree}/${proxyInfo.cert})\n當月天數: ${dInM}天 | 代理天數: ${days}天\n計算：基準 ${base} + ${allowKey} ${allow} + 彩虹加給 ${rain}\n每日 ${daily} 元 × ${days} 天 = ${total} 元`;
+            }
+            
+            detailBox.innerText = detail;
+            window.lastCalcResult = { total, detail, isF, leaveTeacherName, proxyName, startDateStr, endDateStr };
+            document.getElementById('btn-add').disabled = false;
+        };
+
+        window.saveRecord = async () => {
+            if(!window.lastCalcResult) return;
+            // 修正 (a)：根據是否為全日模式組裝日期
+            const finalDateStr = window.lastCalcResult.isF 
+                ? `${window.lastCalcResult.startDateStr} ~ ${window.lastCalcResult.endDateStr}`
+                : window.lastCalcResult.startDateStr;
+
+            const record = {
+                isFullDay: window.lastCalcResult.isF,
+                teacherName: window.lastCalcResult.leaveTeacherName,
+                date: finalDateStr,
+                time: window.lastCalcResult.isF ? "-" : document.getElementById('ta-hours').value + "hr",
+                reason: document.getElementById('ta-reason').value || "-",
+                proxy: window.lastCalcResult.proxyName,
+                detail: window.lastCalcResult.detail,
+                createdAt: new Date().toISOString()
+            };
+            await addDoc(collection(db, "records"), record);
+            alert("已儲存紀錄"); 
+            await loadHistoryRecords();
+            if(auth.currentUser) await loadAdminHistoryRecords();
+            document.getElementById('btn-add').disabled = true;
+        };
+
         async function loadHistoryRecords() {
             const tbody = document.getElementById('tb-body');
             const q = query(collection(db, "records"), orderBy("createdAt", "desc"));
@@ -249,13 +349,11 @@
             });
         }
 
-        // 載入後台紀錄 (具有刪除功能)
         async function loadAdminHistoryRecords() {
             const tbody = document.getElementById('adm-history-body');
             const q = query(collection(db, "records"), orderBy("createdAt", "desc"));
             const snap = await getDocs(q);
             tbody.innerHTML = "";
-            
             snap.forEach(d => {
                 const data = d.data();
                 const tr = document.createElement('tr');
@@ -265,105 +363,19 @@
                     <td class="p-3">${data.proxy}</td>
                     <td class="p-3 text-slate-500 truncate max-w-xs">${data.detail.substring(0, 50)}...</td>
                     <td class="p-3 text-center">
-                        <button onclick="deleteRecord('${d.id}')" class="bg-red-50 text-red-600 px-3 py-1 rounded-lg font-bold hover:bg-red-600 hover:text-white transition">
-                            刪除
-                        </button>
-                    </td>
-                `;
+                        <button onclick="deleteRecord('${d.id}')" class="bg-red-50 text-red-600 px-3 py-1 rounded-lg font-bold">刪除</button>
+                    </td>`;
                 tbody.appendChild(tr);
             });
         }
 
-        // 刪除紀錄邏輯
         window.deleteRecord = async (id) => {
-            if(confirm("確定要永久刪除這筆紀錄嗎？此動作無法復原。")) {
-                try {
-                    await deleteDoc(doc(db, "records", id));
-                    alert("紀錄已刪除");
-                    await loadHistoryRecords(); // 同步更新前台
-                    await loadAdminHistoryRecords(); // 同步更新後台
-                } catch (error) {
-                    console.error("刪除失敗:", error);
-                    alert("刪除失敗，請檢查權限");
-                }
+            if(confirm("確定要永久刪除這筆紀錄嗎？")) {
+                await deleteDoc(doc(db, "records", id));
+                loadHistoryRecords(); loadAdminHistoryRecords();
             }
         };
 
-        // --- 原有邏輯保持 (試算、班級對應等) ---
-        
-        async function loadTeacherClassMap() {
-            const snap = await getDocs(collection(db, "teacher_classes"));
-            window.teacherClassMap = {};
-            snap.forEach(d => { window.teacherClassMap[d.data().name] = d.data().classType; });
-        }
-
-        window.signIn = async () => {
-            const e = document.getElementById('adm-email').value, p = document.getElementById('adm-pw').value;
-            try { await signInWithEmailAndPassword(auth, e, p); } catch { alert("登入失敗"); }
-        };
-
-        window.logoutAndClose = async () => {
-            if(auth.currentUser) await signOut(auth);
-            document.getElementById('adminPanel').classList.add('hidden');
-        };
-
-        window.handleCalculate = async () => {
-            const tSel = document.getElementById('ta-teacher');
-            const opt = tSel.options[tSel.selectedIndex];
-            if(!opt || !opt.value) return alert("請選擇請假教師");
-            const snap = await getDoc(doc(db, "settings", "salary_standard"));
-            if(!snap.exists()) return alert("請先設定薪資標準");
-            const std = snap.data();
-            const isF = document.getElementById('ta-isFullDay').checked;
-            const detailBox = document.getElementById('ta-detail');
-            let total = 0, detail = "";
-            const teacherName = opt.textContent;
-            const assignedClass = window.teacherClassMap[teacherName] || "普通班";
-
-            if (!isF) {
-                const hrs = parseInt(document.getElementById('ta-hours').value);
-                total = 190 * hrs;
-                detail = `【時薪模式】時薪 190 元 × ${hrs} 小時 = ${total} 元`;
-            } else {
-                const info = JSON.parse(opt.dataset.info);
-                const sy = document.getElementById('ta-sy').value, sm = document.getElementById('ta-sm').value;
-                const dInM = new Date(sy, sm, 0).getDate(), key = `除${dInM}天`;
-                const base = std[info.degree][info.cert][key];
-                const allowKey = info.degree === "碩士" ? "導師費" : "教保費";
-                const allow = std["每日加給"][allowKey][key];
-                const rain = assignedClass === "彩虹班" ? std["每日加給"]["彩虹班代課"][key] : 0;
-                const d1 = new Date(sy, sm-1, document.getElementById('ta-sd').value);
-                const d2 = new Date(document.getElementById('ta-ey').value, document.getElementById('ta-em').value-1, document.getElementById('ta-ed').value);
-                const days = Math.ceil((d2 - d1) / (1000*60*60*24)) + 1;
-                const daily = base + allow + rain;
-                total = daily * days;
-                detail = `[全日代課] 教師: ${teacherName} | 班級: ${assignedClass}\n天數: ${dInM} | 代理: ${days}天\n基準: ${base} + ${allowKey}: ${allow} + 彩虹: ${rain}\n每日 ${daily} 元 × ${days} 天 = ${total} 元`;
-            }
-            detailBox.innerText = detail;
-            window.lastCalcResult = { total, detail, isF };
-            document.getElementById('btn-add').disabled = false;
-        };
-
-        window.saveRecord = async () => {
-            if(!window.lastCalcResult) return;
-            const record = {
-                isFullDay: window.lastCalcResult.isF,
-                teacherName: document.getElementById('ta-teacher').options[document.getElementById('ta-teacher').selectedIndex].text,
-                date: `${document.getElementById('ta-sy').value}/${document.getElementById('ta-sm').value}/${document.getElementById('ta-sd').value}`,
-                time: window.lastCalcResult.isF ? "-" : document.getElementById('ta-hours').value + "hr",
-                reason: document.getElementById('ta-reason').value || "-",
-                proxy: document.getElementById('ta-proxy').value || "-",
-                detail: window.lastCalcResult.detail,
-                createdAt: new Date().toISOString()
-            };
-            await addDoc(collection(db, "records"), record);
-            alert("已儲存紀錄"); 
-            await loadHistoryRecords();
-            if(auth.currentUser) await loadAdminHistoryRecords();
-            document.getElementById('btn-add').disabled = true;
-        };
-
-        // --- UI 控制與其他輔助功能 ---
         function setupDateSelectors() {
             const yOpts = [2025, 2026, 2027];
             ['s', 'e'].forEach(p => {
@@ -393,36 +405,14 @@
             document.getElementById('label-s').classList.toggle('hidden', !isF);
         };
 
-        window.exportToExcel = () => {
-            const wb = XLSX.utils.table_to_book(document.getElementById('table-tb'));
-            XLSX.writeFile(wb, "薪資紀錄.xlsx");
+        window.signIn = async () => {
+            const e = document.getElementById('adm-email').value, p = document.getElementById('adm-pw').value;
+            try { await signInWithEmailAndPassword(auth, e, p); } catch { alert("登入失敗"); }
         };
 
-        window.dbAddTeacherClass = async () => {
-            const name = document.getElementById('adm-tc-name').value.trim();
-            const type = document.getElementById('adm-tc-type').value;
-            if(!name) return alert("請輸入教師姓名");
-            await addDoc(collection(db, "teacher_classes"), { name, classType: type, createdAt: new Date().toISOString() });
-            document.getElementById('adm-tc-name').value = "";
-            await loadTeacherClassMap();
-            refreshTeacherClassList();
-        };
-
-        async function refreshTeacherClassList() {
-            const container = document.getElementById('adm-tc-list');
-            const snap = await getDocs(query(collection(db, "teacher_classes"), orderBy("name")));
-            container.innerHTML = "";
-            snap.forEach(d => {
-                const item = document.createElement('div');
-                item.className = "flex justify-between items-center p-3 hover:bg-white";
-                item.innerHTML = `<div><span class="font-bold">${d.data().name}</span> <span class="ml-2 text-xs text-slate-400">${d.data().classType}</span></div>
-                                  <button onclick="deleteTeacherClass('${d.id}')" class="text-red-400 font-bold text-xs">刪除</button>`;
-                container.appendChild(item);
-            });
-        }
-
-        window.deleteTeacherClass = async (id) => {
-            if(confirm("確定刪除班級對應？")) { await deleteDoc(doc(db, "teacher_classes", id)); await loadTeacherClassMap(); refreshTeacherClassList(); }
+        window.logoutAndClose = async () => {
+            if(auth.currentUser) await signOut(auth);
+            document.getElementById('adminPanel').classList.add('hidden');
         };
 
         window.dbAddTeacher = async () => {
@@ -448,18 +438,36 @@
             });
         }
 
-        async function refreshTADropdowns() {
-            const tSel = document.getElementById('ta-teacher'), rSel = document.getElementById('ta-reason'), pSel = document.getElementById('ta-proxy');
-            tSel.innerHTML = '<option value="">請選擇...</option>';
-            const tSnap = await getDocs(query(collection(db, "teachers"), orderBy("name")));
-            tSnap.forEach(d => {
-                const o = document.createElement('option');
-                o.value = d.id; o.dataset.info = JSON.stringify(d.data()); o.textContent = d.data().name;
-                tSel.appendChild(o);
+        window.dbAddTeacherClass = async () => {
+            const name = document.getElementById('adm-tc-name').value.trim();
+            const type = document.getElementById('adm-tc-type').value;
+            if(!name) return alert("請輸入教師姓名");
+            await addDoc(collection(db, "teacher_classes"), { name, classType: type, createdAt: new Date().toISOString() });
+            document.getElementById('adm-tc-name').value = "";
+            refreshTeacherClassList(); refreshTADropdowns();
+        };
+
+        async function refreshTeacherClassList() {
+            const container = document.getElementById('adm-tc-list');
+            const snap = await getDocs(query(collection(db, "teacher_classes"), orderBy("name")));
+            container.innerHTML = "";
+            snap.forEach(d => {
+                const item = document.createElement('div');
+                item.className = "flex justify-between items-center p-3 hover:bg-white";
+                item.innerHTML = `<div><span class="font-bold">${d.data().name}</span> <span class="ml-2 text-xs text-slate-400">${d.data().classType}</span></div>
+                                  <button onclick="deleteDocById('teacher_classes','${d.id}')" class="text-red-400 font-bold text-xs">刪除</button>`;
+                container.appendChild(item);
             });
-            rSel.innerHTML = '<option>事假(自費)</option><option>病假(自費)</option><option>公假(公派)</option><option>公假(自費)</option>';
-            pSel.innerHTML = '<option>校內代理人</option><option>外聘人員</option>';
         }
+
+        window.deleteDocById = async (col, id) => {
+            if(confirm("確定刪除？")) { 
+                await deleteDoc(doc(db, col, id)); 
+                if(col==='teachers') refreshAdminList();
+                else refreshTeacherClassList();
+                refreshTADropdowns(); 
+            }
+        };
 
         async function loadAndRenderSalaryJSON() {
             const snap = await getDoc(doc(db, "settings", "salary_standard"));
@@ -505,6 +513,10 @@
         };
 
         window.expandAllSalary = () => document.querySelectorAll('[data-salary-toggle]').forEach(b => { b.innerText='▾'; document.getElementById(b.dataset.targetId).classList.remove('hidden'); });
+        
+        // 修正 (b)：新增收折全部功能
+        window.collapseAllSalary = () => document.querySelectorAll('[data-salary-toggle]').forEach(b => { b.innerText='▸'; document.getElementById(b.dataset.targetId).classList.add('hidden'); });
+
         window.toggleAdmin = () => document.getElementById('adminPanel').classList.toggle('hidden');
         window.syncCertOptions = () => {
             const deg = document.getElementById('adm-tdegree').value, sel = document.getElementById('adm-tcert');
@@ -512,10 +524,7 @@
             const opts = deg === "碩士" ? ["有教師證", "無教師證"] : ["有教師證", "僅有教育學分或教育學程", "均無"];
             opts.forEach(o => sel.innerHTML += `<option value="${o}">${o}</option>`);
         };
-        window.deleteDocById = async (col, id) => {
-            if(confirm("確定刪除？")) { await deleteDoc(doc(db, col, id)); refreshAdminList(); refreshTADropdowns(); }
-        };
-
+        window.syncCertOptions();
     </script>
 </body>
 </html>
